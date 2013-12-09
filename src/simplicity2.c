@@ -18,8 +18,9 @@ typedef struct State {
 	int wday;
 	int month;
 	int day;
+	bool init;
 } State;
-static State state = {0, 0, 0, 0};
+static State state = {0, 0, 0, 0, false};
 
 static void battery_layer_update_callback(Layer *me, GContext* ctx) {
 	graphics_context_set_stroke_color(ctx, GColorWhite);
@@ -105,14 +106,14 @@ void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 		wday = 6;
 	}
 
-	if (tick_time->tm_mon != state.month || tick_time->tm_mday != state.day) {
+	if (tick_time->tm_mon != state.month || tick_time->tm_mday != state.day || !state.init) {
 		strftime(date_text, sizeof(date_text), "%B %e", tick_time);
 		text_layer_set_text(text_date_layer, date_text);
 		state.day = tick_time->tm_mday;
 		state.month = tick_time->tm_mon;
 	}
 
-	if (wday != state.wday) {
+	if (wday != state.wday || !state.init) {
 		memmove(day_text, days + 2*wday, 2);
 		layer_set_frame(text_layer_get_layer(text_day_layer), GRect(7 + 17*wday, 145, 30, 30));
 		text_layer_set_text(text_day_layer, day_text);
@@ -152,6 +153,7 @@ int main(void) {
 	battery_state_service_subscribe(&handle_battery);
 	handle_battery(battery_state_service_peek());
 	handle_minute_tick(localtime(&curTime), MINUTE_UNIT);
+	state.init = true;
 	app_event_loop();
 	deinit();
 }
